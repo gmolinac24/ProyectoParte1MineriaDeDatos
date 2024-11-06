@@ -1,0 +1,36 @@
+---
+title: "SITUACIÓN DE LOS SERVICIOS HOSPITALARIOS EN LA CONSULTA INTERNA EN LA CIUDAD DE GUATEMALA"
+output: html_notebook
+---
+### Carga de archivo tipo SPSS
+
+Proceso para agregar a R-Studio el archivo descargado de https://www.ine.gob.gt/estadisticas-hospitalarias/ del Instituto Nacional de Estadística.
+
+### Instrucciones:
+Para cargar un archivo tipo .spss (SPSS) en R-Studio, debe seguir estos pasos:
+
+**Paso 1:** Instalar el paquete necesario
+Instalar el paquete "haven", que permite importar archivos SPSS para realizarlo abra R-Studio y ejecute el siguiente comando:
+
+```{r}
+library(haven)
+```
+
+**Paso 2:** Importar el archivo SPSS, asegúrese de colocar el archivo en la misma carpeta en donde guarda el cuaderno de trabajo.
+
+```{r}
+data_principal <- read_sav("MedicinaInternaINE.sav")
+```
+
+**Paso 3:** Verificar que la importación de los datos se haya realizado de forma correcta, utilizar la función head() para observar las primeras filas del conjunto de datos.
+
+```{r}
+head(data_principal)
+```
+o bien, puede vistualizarse los datos en una nueva ventana, ejecutando el código View()
+```{r}
+View(data_principal)
+```
+
+
+
