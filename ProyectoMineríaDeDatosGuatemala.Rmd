@@ -4,7 +4,7 @@ output: html_notebook
 ---
 ### Carga de archivo tipo SPSS
 
-Proceso para agregar a R-Studio el archivo descargado de https://www.ine.gob.gt/estadisticas-hospitalarias/ del Instituto Nacional de Estadística.
+Proceso para agregar a R-Studio el archivo descargado de https://www.ine.gob.gt/estadisticas-hospitalarias/ del Instituto Nacional de Estadística, fecha: 2022.
 
 ### Instrucciones:
 Para cargar un archivo tipo .spss (SPSS) en R-Studio, debe seguir estos pasos:
@@ -19,18 +19,119 @@ library(haven)
 **Paso 2:** Importar el archivo SPSS, asegúrese de colocar el archivo en la misma carpeta en donde guarda el cuaderno de trabajo.
 
 ```{r}
-data_principal <- read_sav("MedicinaInternaINE.sav")
+#prueba  <- read_sav("ServiciosInternosHospitalesINE.sav")
+data_medicina_interna <- read_sav("MedicinaInternaINE.sav")
 ```
 
 **Paso 3:** Verificar que la importación de los datos se haya realizado de forma correcta, utilizar la función head() para observar las primeras filas del conjunto de datos.
 
 ```{r}
-head(data_principal)
+head(data_medicina_interna)
 ```
 o bien, puede vistualizarse los datos en una nueva ventana, ejecutando el código View()
 ```{r}
-View(data_principal)
+View(data_medicina_interna)
 ```
+
+### **Ejecución del algoritmo APRIORI **
+El algoritmo Apriori es una técnica de minería de datos utilizada para encontrar patrones de asociación en grandes conjuntos de datos. 
+
+**Generación de Conjuntos de Ítems Frecuentes:**
+
+- El algoritmo comienza identificando los conjuntos de ítems frecuentes de un solo ítem (con soporte mayor o igual a un umbral mínimo).
+- Luego, se generan conjuntos de ítems de tamaño 2, 3, y así sucesivamente, combinando los ítems frecuentes.
+- En cada iteración, se filtran los conjuntos de ítems que no cumplen con el umbral de soporte.
+
+**Uso de la Propiedad de Apriori:**
+
+La propiedad de Apriori establece que si un conjunto de ítems es frecuente, todos sus subconjuntos también deben serlo. Esto permite reducir el número de combinaciones a evaluar, ya que si un subconjunto no es frecuente, no se necesita considerar el conjunto que lo incluye.
+
+**Generación de Reglas de Asociación: **
+
+- Una vez que se han identificado los conjuntos de ítems frecuentes, se generan reglas de asociación a partir de estos conjuntos.
+- Se evalúa cada regla utilizando la medida de confianza para determinar su relevancia.
+
+**Filtrado de Reglas:**
+
+Finalmente, se pueden aplicar umbrales de confianza y soporte para filtrar las reglas menos relevantes, quedándose solo con las más significativas.
+
+A continuación, se ejecuta el algoritmo APRIORI para generar reglas de asociación a partir de un conjunto de datos data_medicina_interna, para inicializar el proceso de análisis de reglas.
+
+Se utilizará un umbral mínimo de soporte del 20% (Significa que solo se considerarán las reglas que aparezcan en al menos el 20% de las transacciones. ), y el umbral mínimo de confianza (Significa que solo se generarán reglas donde la confianza sea del 50% o más).
+
+**Importando la librería arules: **
+
+La librería arules en R es una herramienta especializada para la minería de datos, enfocada en la generación de reglas de asociación a partir de grandes conjuntos de datos. Permite identificar patrones de compra frecuentes, calcular medidas como soporte y confianza, y manejar datos en formato de transacciones. Implementa el algoritmo Apriori para descubrir conjuntos de ítems frecuentes y facilita la visualización y filtrado de las reglas generadas, siendo especialmente útil en análisis de cesta de compras, recomendaciones de productos y detección de fraudes.
+
+Ejecutar el código para activar la librería arules.
+Nota: Si la librería no se encuentra instalada, ejecutar el código install.packages("arules")
+
+```{r}
+library(arules)
+```
+
+Ejecutar el código pra activar la librería dplyr. La librería dplyr es una herramienta fundamental para la manipulación y transformación de datos. Proporciona un conjunto de funciones intuitivas y eficientes que permiten realizar operaciones comunes de manera más sencilla y legible.
+
+Ejecutar el código para activar la librería dplyr
+Nota: Si la librería no se encuentra instalada, ejecutar el código install.packages("dplyr")
+
+
+```{r}
+library(dplyr)
+```
+
+Antes de generar las reglas, se identifica que la columna año posee solamente un valor único (2022) en todos los registros, lo cual impide la creación de intervalos, por lo cual se procede a eliminar la mencionada columna.
+
+```{r}
+data_medicina_interna <- data_medicina_interna %>% select(-AÑO)
+```
+Visualizando la data sin la columna año
+
+```{r}
+View(data_medicina_interna)
+```
+Aplicando las reglas del algoritmo Apriori
+
+```{r}
+reglas_medicina_interna <-datos_seleccionados <- datos[, c(1, 2)]  
+apriori(data_medicina_interna, parameter = list(support=0.2, confidence=0.5))
+```
+```{r}
+inspect(reglas_medicina_interna[0:50])
+```
+Sectorizando los datos para seleccionar las columnas de género, causa de atención, edad, tratamiento recibido.
+
+```{r}
+datos_sector <- data_medicina_interna[, c(1, 3, 9, 10, 11)]  
+datos_sector <- apriori(data_medicina_interna, parameter = list(support=0.3, confidence=0.5))
+inspect(datos_sector[0:50])
+```
+
+Verificando los datos NA en la base de datos
+
+```{r}
+total_na <- sum(is.na(data_medicina_interna))
+print(total_na)
+
+```
+
+Generando un itemset para sexo = mujer
+
+```{r}
+data_medicina_interna$SEXO <- as.factor(data_medicina_interna$SEXO)
+data_mujer <- subset(data_medicina_interna, SEXO == 1)
+reglas_mujer <- apriori(data_mujer, parameter = list(support=0.2, confidence=0.5))
+inspect(reglas_mujer[0:50])
+```
+Generando un itemset para sexo = hombre
+
+```{r}
+data_medicina_interna$SEXO <- as.factor(data_medicina_interna$SEXO)
+data_hombre <- subset(data_medicina_interna, SEXO == 2)
+reglas_hombre <- apriori(data_hombre, parameter = list(support=0.2, confidence=0.5))
+inspect(reglas_hombre[0:50])
+```
+
 
 
 
