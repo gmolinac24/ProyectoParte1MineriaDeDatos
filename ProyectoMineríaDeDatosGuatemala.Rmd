@@ -20,17 +20,36 @@ library(haven)
 
 ```{r}
 #prueba  <- read_sav("ServiciosInternosHospitalesINE.sav")
-data_medicina_interna <- read_sav("MedicinaInternaINE.sav")
+a_2018 <- read_sav("2018.sav")
+a_2019 <- read_sav("2019.sav")
+a_2020 <- read_sav("2020.sav")
+a_2021 <- read_sav("2021.sav")
+a_2022 <- read_sav("2022.sav")
 ```
 
 **Paso 3:** Verificar que la importación de los datos se haya realizado de forma correcta, utilizar la función head() para observar las primeras filas del conjunto de datos.
 
 ```{r}
-head(data_medicina_interna)
+print(a_2018)
+head(a_2019)
+head(a_2020)
+head(a_2021)
+head(a_2022)
 ```
+Unir los datos de los 5 años propuestos.
+```{r}
+# Unir los data frames usando rbind
+a_total <- rbind(a_2018, a_2019, a_2020, a_2021, a_2022)
+options(scipen = 999)
+
+# Ver el resultado
+print(a_total)
+
+```
+
 o bien, puede vistualizarse los datos en una nueva ventana, ejecutando el código View()
 ```{r}
-View(data_medicina_interna)
+View(a_total)
 ```
 
 ### **Ejecución del algoritmo APRIORI **
@@ -79,59 +98,214 @@ Nota: Si la librería no se encuentra instalada, ejecutar el código install.pac
 ```{r}
 library(dplyr)
 ```
-
-Antes de generar las reglas, se identifica que la columna año posee solamente un valor único (2022) en todos los registros, lo cual impide la creación de intervalos, por lo cual se procede a eliminar la mencionada columna.
-
-```{r}
-data_medicina_interna <- data_medicina_interna %>% select(-AÑO)
-```
-Visualizando la data sin la columna año
+Aplicando las reglas del algoritmo Apriori en toda la base de datos
 
 ```{r}
-View(data_medicina_interna)
-```
-Aplicando las reglas del algoritmo Apriori
-
-```{r}
-reglas_medicina_interna <-datos_seleccionados <- datos[, c(1, 2)]  
-apriori(data_medicina_interna, parameter = list(support=0.2, confidence=0.5))
-```
-```{r}
-inspect(reglas_medicina_interna[0:50])
+a_reglas <- apriori(a_total, parameter = list(support=0.2, confidence=0.5))
+options(scipen = 999)
+inspect(a_reglas[401:500])
 ```
 Sectorizando los datos para seleccionar las columnas de género, causa de atención, edad, tratamiento recibido.
 
 ```{r}
-datos_sector <- data_medicina_interna[, c(1, 3, 9, 10, 11)]  
-datos_sector <- apriori(data_medicina_interna, parameter = list(support=0.3, confidence=0.5))
-inspect(datos_sector[0:50])
+a_sector <- a_total[, c(1, 3, 8, 9, 10)]  
+a_reglas_sector <- apriori(a_total, parameter = list(support=0.2, confidence=0.5))
+inspect(a_reglas_sector[0:100])
+#inspect(a_reglas_sector[51:100])
+#inspect(a_reglas_sector[101:150])
 ```
 
 Verificando los datos NA en la base de datos
 
 ```{r}
-total_na <- sum(is.na(data_medicina_interna))
+total_na <- sum(is.na(a_total))
 print(total_na)
 
 ```
-
 Generando un itemset para sexo = mujer
 
 ```{r}
-data_medicina_interna$SEXO <- as.factor(data_medicina_interna$SEXO)
-data_mujer <- subset(data_medicina_interna, SEXO == 1)
+a_total$SEXO <- as.factor(a_total$SEXO)
+data_mujer <- subset(a_total, SEXO == 2)
 reglas_mujer <- apriori(data_mujer, parameter = list(support=0.2, confidence=0.5))
-inspect(reglas_mujer[0:50])
+inspect(reglas_mujer[0:100])
+
+```
+Exportar a Excel las reglas
+
+```{r}
+install.packages("writexl")
+library(writexl)
+# Convertir las reglas a un data frame
+#reglas_mujer <- as.data.frame(inspect(reglas_mujer))
+
+# Exportar a un archivo Excel
+#write_xlsx(reglas_mujer, "reglas_mujer.xlsx")
 ```
 Generando un itemset para sexo = hombre
 
 ```{r}
-data_medicina_interna$SEXO <- as.factor(data_medicina_interna$SEXO)
-data_hombre <- subset(data_medicina_interna, SEXO == 2)
+a_total$SEXO <- as.factor(a_total$SEXO)
+data_hombre <- subset(a_total, SEXO == 1)
 reglas_hombre <- apriori(data_hombre, parameter = list(support=0.2, confidence=0.5))
-inspect(reglas_hombre[0:50])
+inspect(reglas_hombre[0:100])
+```
+
+Itemset para causa de atención, sexo, días de estancia
+
+```{r}
+csd <- a_total[,c(4,3,10)]
+reglas_csd <- apriori(csd, parameter = list(support=0.2, confidence=0.5))
+inspect(reglas_csd[0:6])
 ```
 
 
+### **Ejecución del algoritmo FP-Growth  **
+Para ejecutar el algoritmo FP-Growth en R, se cargan las siguientes librerías:
+
+**Arules**
+
+Esta es la librería más común para realizar análisis de reglas de asociación, que incluye implementaciones de FP-Growth.
+
+```{r}
+library(arules)
+```
+
+
+**Fim4r **
+
+La librería fim4r en R implementa algoritmos de minería de patrones frecuentes, incluido el algoritmo FP-Growth. Esta librería es especialmente útil para trabajar con grandes conjuntos de datos y proporciona una interfaz sencilla para ejecutar varios algoritmos de minería de datos.
+
+```{r}
+library(fim4r)
+```
+
+Ahora, ejecutamos el algoritmo FP-Growth para análisis de reglas, las cuales se incluye toda la data, con la finalidad de encontrar patrones y relaciones interesantes acerca de los servicios hospitalarios en consulta interna.
+
+```{r}
+reglas_fpg <- fim4r(a_total, method = "fpgrowth", target="rules", supp = .2, conf = .5)
+```
+Visualizar las reglas en un data frame
+
+```{r}
+reglas_fp_frame <- as(reglas_fpg, "data.frame")
+View(reglas_fp_frame)
+```
+
+**Sectorizando datos para análisis FP-Growth**
+
+Ahora se sectorizan los datos para analizar comportamientos que involucren las variables de mes, días de estancia, sexo, pueblo de pertenencia (grupo etnico al que pertenece), causa de atención, departamento de residencia y condición de egreso.
+
+Analizando estas variables se pretende encontrar, ¿Qué personas padecen mayor parte de enfermedades? y ¿Qué enfermedades aqueja más a la población.
+
+```{r}
+data_sec_fp <- subset(a_total, CAUFIN =="U071")
+data_sec_fp2 <- data_sec_fp[,c(1,2,3,4)] 
+head(data_sec_fp2)
+```
+
+Alicando el algoritmo a la data sectorizada
+```{r}
+reglas_sfpg <- fim4r(data_sec_fp2, method = "fpgrowth", target="rules", supp = .2, conf = .5)
+```
+Visualizando la data sectorizada
+
+```{r}
+reglas_sfp_frame <- as(reglas_sfpg, "data.frame")
+View(reglas_sfp_frame)
+```
+
+Sectorizando como pivote, pueblo de pertenencia = a maya y garífuna
+
+```{r}
+data_sec_fpr2 <- subset(a_total, CONDIEGRES == 2)
+data_secc_fpr2 <- data_sec_fpr2[,c(1,3, 6, 10)] 
+head(data_secc_fpr2)
+reglas_sfpgr2 <- fim4r(data_secc_fpr2, method = "fpgrowth", target="rules", supp = .2, conf = .5)
+reglas_sfpgr2_frame <- as(reglas_sfpgr2, "data.frame")
+View(reglas_sfpgr2_frame)
+
+```
+### Análisis de Clúster
+El análisis de clúster es una técnica de minería de datos y aprendizaje automático que se utiliza para agrupar un conjunto de objetos o datos en grupos (o "clústeres") basándose en características similares.
+
+El objetivo principal es que los objetos dentro de un mismo clúster sean más similares entre sí que aquellos en otros clústeres.
+
+**K -means** 
+
+K-means es un algoritmo de agrupamiento (clustering) ampliamente utilizado en minería de datos y aprendizaje automático. Su objetivo es dividir un conjunto de datos en K clústeres (grupos) en los que los elementos dentro de cada clúster son más similares entre sí que con los de otros clústeres.
+
+- K-means es un algoritmo no supervisado, lo que significa que no necesita etiquetas o categorías predefinidas para los datos.
+- Cada clúster se representa mediante un centroide, que es el punto medio (promedio) de todos los puntos en ese clúster.
+- El usuario debe especificar el número de clústeres (K) antes de ejecutar el algoritmo.
+
+Para ejecutar el algoritmo K-means, se necesita en primer lugar la instalación de las bibliotecas requeridas.
+
+Ejecute la biblioteca ggplot2, si la misma no está instalada, ejecute la instalación con el comando install.packages("ggplot2")y posteriormente ejecutar el comando library("ggplot2")
+
+```{r}
+library(ggplot2)
+library(ggplot2)
+```
+
+Iniciando el proceso de Clusterización
+
+```{r}
+clus_r1 <- a_total[,c(1,3, 6, 10)] 
+c_reglas<- apriori(clus_r1, parameter = list(support=0.2, confidence=0.5))
+
+cluser_r1 <- kmeans(clus_r1, centers = 4)
+
+ggplot(clus_r1, aes(x = DIASESTANCIA, y = EDAD, color = as.factor(cluster$cluster)))+
+  geom_point()+
+  geom_point(data = as.data.frame(cluster$centers), aes(x=DIASESTANCIA, y = EDAD), color = "black", size=4, shape=17)+
+  labs(title = "Dias estancia vs sexo")+
+  theme_minimal()
+
+```
+
+
+Agrupamos la data de importancia
+
+```{r}
+filtro_clus <- a_total %>%
+    filter(SEXO == 2, DIASESTANCIA>2, DIASESTANCIA!=999) %>%  
+  select(SEXO, CAUFIN)
+head(filtro_clus)
+View(filtro_clus)
+```
+
+Para elegir el valor adecuado de clústers, se utilizará la función fviz_nbclust del paquete "factoextra" 
+
+La función “fviz_nbclust()” genera una gráfica que muestra los valores de un criterio de selección, como el índice de silueta o el método de la suma de cuadrados internos (SSB/SSW), en función del número de clusters. El objetivo es encontrar el punto en la gráfica donde el criterio de selección alcanza su valor máximo o donde se produce un cambio significativo. Este punto indica el número óptimo de clusters para el conjunto de datos.
+
+Para lograrlo, se ejecutará el siguiente código
+
+```{r}
+library(factoextra)
+fviz_nbclust(filtro_clus, kmeans, method = "wss") + geom_vline(xintercept = 4, linetype = 2)
+```
+
+Cálculo de agrupación k-means
+
+```{r}
+# Contar la cantidad de puntos de datos únicos
+puntos_unicos <- unique(filtro_clus)
+cantidad_unicos <- nrow(puntos_unicos)
+
+# Imprimir la cantidad de puntos de datos únicos
+print(paste("Cantidad de puntos de datos únicos:", cantidad_unicos))
+
+# Ajustar el número de clústeres
+k <- min(2, cantidad_unicos)  # Ajustar según el número de observaciones
+print(k)
+
+# Ejecutar kmeans
+resultado_kmeans <- kmeans(puntos_unicos[, -c(2)], centers = k, nstart = 25)  # Excluir la columna SEXO
+```
+```{r}
+set.seed(123)
+km.res <- kmeans(filtro_clus, 2, nstart = 50)
+```
 
 
